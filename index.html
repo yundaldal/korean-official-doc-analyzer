@@ -405,69 +405,96 @@
 
   <!-- GPT -->
   <div class="tab-pane" id="tab-gpt">
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(16,185,129,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:24px 28px; margin-bottom:24px;">
+      <div style="font-size:16px; font-weight:800; margin-bottom:10px;">⚡ 가장 쉬운 방법</div>
+      <div style="font-size:14px; color:var(--text-muted); line-height:1.8;">
+        ChatGPT 채팅창에 <strong style="color:var(--text);">SKILL.md 파일</strong>과 <strong style="color:var(--text);">분석할 공문서 파일</strong>을 함께 올리고<br>
+        <code style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;">"공문 검토해줘"</code> 또는 <code style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;">"작년 계획서 분석해줘"</code> 라고 입력하면 바로 실행됩니다.
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a href="https://github.com/yundaldal/korean-official-doc-analyzer/archive/refs/heads/main.zip"
+           class="btn-primary" style="font-size:13px;padding:10px 18px;border-radius:8px;">⬇ ZIP 다운로드 (SKILL.md 포함)</a>
+        <span style="font-size:13px; color:var(--text-muted);">압축 해제 후 SKILL.md 파일을 채팅창에 드래그앤드롭</span>
+      </div>
+    </div>
     <div class="install-grid">
       <div class="install-card">
         <div class="install-num">1</div>
-        <div class="install-title">SKILL.md 내용 복사</div>
-        <div class="install-desc">GitHub에서 SKILL.md 파일을 열고 전체 내용을 복사합니다.</div>
+        <div class="install-title">SKILL.md 파일 준비</div>
+        <div class="install-desc">ZIP을 다운로드하고 압축을 해제하면 <code style="font-family:'JetBrains Mono',monospace;font-size:12px;">SKILL.md</code> 파일이 있습니다.</div>
         <a href="https://github.com/yundaldal/korean-official-doc-analyzer/blob/main/SKILL.md"
-           class="btn-secondary" target="_blank" style="font-size:13px;padding:10px 18px;border-radius:8px;margin-top:4px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">🐙 SKILL.md 열기</a>
+           class="btn-secondary" target="_blank" style="font-size:13px;padding:10px 18px;border-radius:8px;margin-top:4px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">🐙 GitHub에서 보기</a>
       </div>
       <div class="install-card">
         <div class="install-num">2</div>
-        <div class="install-title">ChatGPT 대화 시작</div>
-        <div class="install-desc">ChatGPT에서 새 대화를 시작하고 아래 형식으로 입력합니다.</div>
+        <div class="install-title">ChatGPT 채팅창에 업로드</div>
+        <div class="install-desc">ChatGPT 새 대화에서 SKILL.md 파일과 공문서 파일을 함께 첨부합니다.</div>
         <div class="code-block">
-          다음 지침을 따라 공문서를 분석해줘:<br><br>
-          [SKILL.md 전체 내용 붙여넣기]
+          파일 첨부: SKILL.md + 공문서 파일<br>
+          입력: "공문 검토해줘"
         </div>
       </div>
       <div class="install-card">
         <div class="install-num">3</div>
-        <div class="install-title">파일 업로드 후 요청</div>
-        <div class="install-desc">분석할 공문서 파일을 첨부하고 아래처럼 요청합니다.</div>
+        <div class="install-title">바로 실행</div>
+        <div class="install-desc">추가 설정 없이 바로 분석이 시작됩니다. 다음 번에도 같은 방식으로 사용하면 됩니다.</div>
         <div class="code-block">
           공문 검토해줘<br>
-          ─ 또는 ─<br>
-          작년 계획서 분석해줘
+          작년 계획서 분석해줘<br>
+          두 문서 비교해줘
         </div>
       </div>
     </div>
     <div style="margin-top:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 24px; font-size:14px; color:var(--text-muted);">
-      💡 <strong style="color:var(--text);">팁</strong>: ChatGPT Plus 사용자라면 <strong style="color:var(--text);">Custom GPT</strong>의 System Prompt에 SKILL.md 내용을 넣어두면 매번 붙여넣지 않아도 됩니다.
+      💡 <strong style="color:var(--text);">더 편하게 쓰려면 (Custom GPT)</strong>: ChatGPT Plus 사용자라면 <strong style="color:var(--text);">Custom GPT</strong>의 System Prompt에 SKILL.md 내용을 붙여넣어 두면 파일을 매번 올리지 않아도 됩니다.
     </div>
   </div>
 
   <!-- Gemini -->
   <div class="tab-pane" id="tab-gemini">
+    <div style="background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(59,130,246,0.05)); border:1px solid rgba(59,130,246,0.3); border-radius:14px; padding:24px 28px; margin-bottom:24px;">
+      <div style="font-size:16px; font-weight:800; margin-bottom:10px;">⚡ 가장 쉬운 방법</div>
+      <div style="font-size:14px; color:var(--text-muted); line-height:1.8;">
+        Gemini 채팅창에 <strong style="color:var(--text);">SKILL.md 파일</strong>과 <strong style="color:var(--text);">분석할 공문서 파일</strong>을 함께 올리고<br>
+        <code style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;">"공문 검토해줘"</code> 또는 <code style="background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:12px;">"작년 계획서 분석해줘"</code> 라고 입력하면 바로 실행됩니다.
+      </div>
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <a href="https://github.com/yundaldal/korean-official-doc-analyzer/archive/refs/heads/main.zip"
+           class="btn-primary" style="font-size:13px;padding:10px 18px;border-radius:8px;">⬇ ZIP 다운로드 (SKILL.md 포함)</a>
+        <span style="font-size:13px; color:var(--text-muted);">압축 해제 후 SKILL.md 파일을 채팅창에 드래그앤드롭</span>
+      </div>
+    </div>
     <div class="install-grid">
       <div class="install-card">
         <div class="install-num">1</div>
-        <div class="install-title">SKILL.md 내용 복사</div>
-        <div class="install-desc">GitHub에서 SKILL.md 파일을 열고 전체 내용을 복사합니다.</div>
+        <div class="install-title">SKILL.md 파일 준비</div>
+        <div class="install-desc">ZIP을 다운로드하고 압축을 해제하면 <code style="font-family:'JetBrains Mono',monospace;font-size:12px;">SKILL.md</code> 파일이 있습니다.</div>
         <a href="https://github.com/yundaldal/korean-official-doc-analyzer/blob/main/SKILL.md"
-           class="btn-secondary" target="_blank" style="font-size:13px;padding:10px 18px;border-radius:8px;margin-top:4px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">🐙 SKILL.md 열기</a>
+           class="btn-secondary" target="_blank" style="font-size:13px;padding:10px 18px;border-radius:8px;margin-top:4px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">🐙 GitHub에서 보기</a>
       </div>
       <div class="install-card">
         <div class="install-num">2</div>
-        <div class="install-title">Gemini Gems 설정 <span style="font-size:11px;color:var(--accent);font-weight:700;">추천</span></div>
-        <div class="install-desc">Gemini Advanced → Gems → 새 Gem 만들기 → Instructions에 SKILL.md 내용 붙여넣기. 한 번만 설정하면 계속 사용 가능합니다.</div>
-        <a href="https://gemini.google.com/gems"
-           class="btn-secondary" target="_blank" style="font-size:13px;padding:10px 18px;border-radius:8px;margin-top:4px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">💎 Gems 열기</a>
+        <div class="install-title">Gemini 채팅창에 업로드</div>
+        <div class="install-desc">Gemini 새 대화에서 SKILL.md 파일과 공문서 파일을 함께 첨부합니다.</div>
+        <div class="code-block">
+          파일 첨부: SKILL.md + 공문서 파일<br>
+          입력: "공문 검토해줘"
+        </div>
       </div>
       <div class="install-card">
         <div class="install-num">3</div>
-        <div class="install-title">파일 업로드 후 요청</div>
-        <div class="install-desc">Gemini 대화창 또는 Gems에서 공문서 파일을 첨부하고 요청합니다.</div>
+        <div class="install-title">바로 실행</div>
+        <div class="install-desc">추가 설정 없이 바로 분석이 시작됩니다. 다음 번에도 같은 방식으로 사용하면 됩니다.</div>
         <div class="code-block">
           공문 검토해줘<br>
-          ─ 또는 ─<br>
-          작년 계획서 분석해줘
+          작년 계획서 분석해줘<br>
+          두 문서 비교해줘
         </div>
       </div>
     </div>
     <div style="margin-top:20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 24px; font-size:14px; color:var(--text-muted);">
-      💡 <strong style="color:var(--text);">Google AI Studio</strong> 사용자라면 System Instruction 칸에 SKILL.md 내용을 넣으면 API 방식으로도 활용 가능합니다.
+      💡 <strong style="color:var(--text);">더 편하게 쓰려면 (Gems)</strong>: Gemini Advanced 사용자라면 <strong style="color:var(--text);">Gems</strong> 설정에 SKILL.md 내용을 Instructions로 넣어두면 파일을 매번 올리지 않아도 됩니다.
+      <a href="https://gemini.google.com/gems" target="_blank" style="color:var(--primary); margin-left:8px;">💎 Gems 열기 →</a>
     </div>
   </div>
 </section>
