@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공문서 AI 분석 스킬 — Korean Official Doc Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --primary: #3b82f6;
+      --primary-glow: rgba(59,130,246,0.15);
+      --accent: #10b981;
+      --accent-glow: rgba(16,185,129,0.12);
+      --warn: #f59e0b;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #484f58;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── 배경 그리드 ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── 히어로 ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 24px 60px;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-glow);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 13px;
+      color: var(--primary);
+      font-weight: 500;
+      margin-bottom: 32px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero-title {
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+      animation: fadeDown 0.6s 0.1s ease both;
+    }
+
+    .hero-title .highlight {
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--text-muted);
+      max-width: 560px;
+      margin-bottom: 48px;
+      font-weight: 300;
+      animation: fadeDown 0.6s 0.2s ease both;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeDown 0.6s 0.3s ease both;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 0 30px rgba(59,130,246,0.3);
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+      box-shadow: 0 0 50px rgba(59,130,246,0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: transparent;
+      color: var(--text);
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface);
+      border-color: var(--text-muted);
+      transform: translateY(-2px);
+    }
+
+    /* ── LLM 지원 뱃지 ── */
+    .llm-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 48px;
+      animation: fadeDown 0.6s 0.4s ease both;
+    }
+
+    .llm-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .llm-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot-claude { background: #d97706; }
+    .dot-gpt { background: #10b981; }
+    .dot-gemini { background: #3b82f6; }
+
+    /* ── 섹션 공통 ── */
+    section {
+      position: relative;
+      z-index: 1;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 80px 24px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 48px;
+    }
+
+    /* ── 모드 카드 ── */
+    .modes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .mode-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mode-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .mode-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .mode-card.orange::before { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+
+    .mode-card:hover {
+      border-color: var(--text-muted);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .mode-emoji { font-size: 32px; margin-bottom: 16px; }
+
+    .mode-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .mode-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .mode-triggers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .trigger-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── 설치 가이드 ── */
+    .install-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .install-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      transition: border-color 0.2s;
+    }
+
+    .install-card:hover { border-color: var(--text-dim); }
+
+    .install-num {
+      width: 36px; height: 36px;
+      background: var(--primary-glow);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 16px;
+    }
+
+    .install-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .install-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .code-block {
+      background: #010409;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #79c0ff;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+    /* ── 체크포인트 ── */
+    .cp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .cp-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .cp-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* ── 푸터 ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* ── 애니메이션 ── */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0;
+    }
+
+    /* ── 반응형 ── */
+    @media (max-width: 600px) {
+      .hero-title { letter-spacing: -1px; }
+      .hero-actions { flex-direction: column; align-items: stretch; }
+      .btn-primary, .btn-secondary { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 히어로 -->
+<div class="hero">
+  <div class="badge">
+    <span class="badge-dot"></span>
+    AI 공문서 분석 스킬 · 무료 오픈소스
+  </div>
+
+  <h1 class="hero-title">
+    공문 검토,<br>
+    <span class="highlight">AI에게 맡기세요</span>
+  </h1>
+
+  <p class="hero-sub">
+    날짜·요일 오류, 맞춤법, 담당자 정보, 연도 변경 누락까지<br>
+    한 번에 점검하는 교육 공문서 전용 AI 스킬
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/yundaldal/korean-official-doc-analyzer/archive/refs/heads/main.zip"
+       class="btn-primary">
+      ⬇ ZIP 다운로드
+    </a>
+    <a href="https://github.com/yundaldal/korean-official-doc-analyzer"
+       class="btn-secondary" target="_blank">
+      🐙 GitHub 보기
+    </a>
+  </div>
+
+  <div class="llm-row">
+    <div class="llm-tag"><span class="llm-dot dot-claude"></span> Claude 지원</div>
+    <div class="llm-tag"><span class="llm-dot dot-gpt"></span> GPT 지원</div>
+    <div class="llm-tag"><span class="llm-dot dot-gemini"></span> Gemini 지원</div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- 두 가지 모드 -->
+<section>
+  <div class="section-label">기능</div>
+  <h2 class="section-title">두 가지 모드 자동 판별</h2>
+
+  <div class="modes">
+    <div class="mode-card blue">
+      <div class="mode-emoji">🔵</div>
+      <div class="mode-title">공문서 교정 모드</div>
+      <div class="mode-desc">
+        현재 작성 중인 공문의 맞춤법, 날짜·요일 오류, 단어 누락·반복을 자동으로 탐지합니다.<br>
+        이미지(캡처본) 또는 텍스트 직접 입력도 지원합니다.
+      </div>
+      <div class="mode-triggers">
+        <span class="trigger-chip">공문 검토해줘</span>
+        <span class="trigger-chip">오류 찾아줘</span>
+        <span class="trigger-chip">날짜 맞는지 확인</span>
+      </div>
+    </div>
+
+    <div class="mode-card orange">
+      <div class="mode-emoji">🟠</div>
+      <div class="mode-title">연도변경 분석 모드</div>
+      <div class="mode-desc">
+        작년 계획서를 올해 버전으로 바꿀 때 필요한 모든 변경 항목을 색깔별로 분류해 제시합니다.
+        파일 2개를 올리면 두 문서를 비교합니다.
+      </div>
+      <div class="mode-triggers">
+        <span class="trigger-chip">작년 계획서 분석</span>
+        <span class="trigger-chip">2025→2026 변환</span>
+        <span class="trigger-chip">두 문서 비교</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 설치 방법 -->
+<section>
+  <div class="section-label">설치</div>
+  <h2 class="section-title">3단계로 설치 완료</h2>
+
+  <div class="install-grid">
+    <div class="install-card">
+      <div class="install-num">1</div>
+      <div class="install-title">ZIP 다운로드</div>
+      <div class="install-desc">위 버튼을 눌러 ZIP 파일을 다운로드하고 압축을 해제합니다.</div>
+      <a href="https://github.com/yundaldal/korean-official-doc-analyzer/archive/refs/heads/main.zip"
+         class="btn-primary" style="font-size:13px; padding:10px 18px; text-decoration:none; display:inline-flex; align-items:center; gap:8px; border-radius:8px;">
+        ⬇ 다운로드
+      </a>
+    </div>
+
+    <div class="install-card">
+      <div class="install-num">2</div>
+      <div class="install-title">스킬 폴더에 복사</div>
+      <div class="install-desc">압축 해제된 폴더를 Claude 스킬 경로에 복사합니다.</div>
+      <div class="code-block" style="position:relative;">
+        C:\Users\사용자명\<br>.claude\skills\<br>korean-official-doc-analyzer
+        <button class="copy-btn" onclick="copyText('C:\\Users\\사용자명\\.claude\\skills\\korean-official-doc-analyzer', this)">복사</button>
+      </div>
+    </div>
+
+    <div class="install-card">
+      <div class="install-num">3</div>
+      <div class="install-title">Claude Desktop 재시작</div>
+      <div class="install-desc">Claude Desktop을 완전히 종료 후 재시작하면 스킬이 자동으로 인식됩니다.</div>
+      <div class="code-block" style="position:relative;">
+        git clone https://github.com/<br>yundaldal/korean-official-<br>doc-analyzer.git
+        <button class="copy-btn" onclick="copyText('git clone https://github.com/yundaldal/korean-official-doc-analyzer.git', this)">복사</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 하네스 체크포인트 -->
+<section>
+  <div class="section-label">분석 결과</div>
+  <h2 class="section-title">단계별 수정 체크포인트 제공</h2>
+
+  <div class="cp-grid">
+    <div class="cp-item"><span class="cp-icon">❌</span> 맞춤법·어법 오류</div>
+    <div class="cp-item"><span class="cp-icon">❌</span> 날짜·요일 정확성</div>
+    <div class="cp-item"><span class="cp-icon">❌</span> 단어 누락·반복</div>
+    <div class="cp-item"><span class="cp-icon">🔶</span> 발신 기관명 확인</div>
+    <div class="cp-item"><span class="cp-icon">🔶</span> 공문번호 형식 확인</div>
+    <div class="cp-item"><span class="cp-icon">🔶</span> 담당자 이름 확인</div>
+    <div class="cp-item"><span class="cp-icon">🔶</span> 담당자 연락처 확인</div>
+    <div class="cp-item"><span class="cp-icon">🔶</span> 수신기관 명칭 확인</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- 푸터 -->
+<footer>
+  <p style="margin-bottom:8px;">
+    특수교육 현장에서 공문서 작성 부담을 줄이기 위해 만들었습니다.
+  </p>
+  <p>
+    <a href="https://github.com/yundaldal/korean-official-doc-analyzer" target="_blank">GitHub</a>
+    &nbsp;·&nbsp;
+    MIT License &nbsp;·&nbsp; 무료 사용·배포 가능
+  </p>
+</footer>
+
+<script>
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const original = btn.textContent;
+      btn.textContent = '✓ 복사됨';
+      btn.style.color = '#10b981';
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.style.color = '';
+      }, 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
