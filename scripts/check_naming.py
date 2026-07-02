@@ -25,8 +25,87 @@
 import sys
 import re
 import json
+import datetime
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
+
+
+# ==============================
+# 기관명 개편 검증 (2026.7.1. 시행)
+# ==============================
+# 광주광역시교육청 + 전라남도교육청 통합 → 전남광주통합특별시교육청 출범(2026.7.1.)
+# 스킬 실행 시점(datetime.date.today())이 시행일 이후인 경우에만 구 명칭을 오류로 판정한다.
+
+ORG_RENAME_EFFECTIVE_DATE = datetime.date(2026, 7, 1)
+
+# 신규 공식 명칭
+NEW_ORG_NAME = "전남광주통합특별시교육청"
+NEW_DEPT_NAME = "학교교육국 중등특수교육과"
+NEW_CENTER_NAME = "전남광주통합특별시교육청 광주특수교육지원센터"
+
+# 구 명칭 (2026.7.1. 이후로는 오류로 판정)
+OLD_ORG_NAME = "광주광역시교육청"
+OLD_CENTER_NAME = "광주광역시교육청 특수교육지원센터"
+
+
+def detect_org_rename_issues(text: str) -> list[dict]:
+    """2026.7.1. 조직 통합에 따른 구 기관명 잔존 여부를 탐지한다.
+
+    - 무조건 오류로 판정하는 대상은 '광주광역시교육청', '광주광역시교육청 특수교육지원센터' 두 가지뿐이다.
+    - 스킬 실행 시점이 시행일(2026.7.1.) 이전이면 검증하지 않는다.
+    - 국/과명('학교교육국 중등특수교육과')은 자동 오류 판정 대상이 아니며,
+      '학교교육국' 누락이 의심되는 경우에 한해 참고용 안내만 제공한다.
+    """
+    issues = []
+
+    if datetime.date.today() < ORG_RENAME_EFFECTIVE_DATE:
+        return issues
+
+    # ① 센터명 (더 구체적인 패턴을 먼저 검사하여 기관명 이슈와 중복 집계되지 않도록 함)
+    center_matches = re.findall(re.escape(OLD_CENTER_NAME), text)
+    if center_matches:
+        issues.append({
+            "canonical": NEW_CENTER_NAME,
+            "variants": [OLD_CENTER_NAME],
+            "issue_type": "기관명(조직개편·구명칭)",
+            "occurrences": {OLD_CENTER_NAME: len(center_matches)},
+            "recommendation": (
+                f"2026.7.1. 광주·전남 교육행정 통합에 따라 '{OLD_CENTER_NAME}'는 "
+                f"'{NEW_CENTER_NAME}'로 변경되었습니다. 반드시 수정하세요."
+            )
+        })
+
+    # ② 기관명 단독 (센터명 표기에 포함된 경우는 중복 집계 제외)
+    org_pattern = re.compile(re.escape(OLD_ORG_NAME) + r'(?!\s*특수교육지원센터)')
+    org_matches = org_pattern.findall(text)
+    if org_matches:
+        issues.append({
+            "canonical": NEW_ORG_NAME,
+            "variants": [OLD_ORG_NAME],
+            "issue_type": "기관명(조직개편·구명칭)",
+            "occurrences": {OLD_ORG_NAME: len(org_matches)},
+            "recommendation": (
+                f"2026.7.1. 광주·전남 교육행정 통합에 따라 '{OLD_ORG_NAME}'는 "
+                f"'{NEW_ORG_NAME}'로 변경되었습니다. 반드시 수정하세요."
+            )
+        })
+
+    # ③ 국/과명 참고용 확인 (자동 오류 판정 아님 — '학교교육국' 누락 의심 시에만 안내)
+    dept_pattern = re.compile(r'(?<!학교교육국\s)(?<!학교교육국)중등특수교육과')
+    dept_matches = dept_pattern.findall(text)
+    if dept_matches:
+        issues.append({
+            "canonical": NEW_DEPT_NAME,
+            "variants": ["중등특수교육과 (소속 국명 누락 의심)"],
+            "issue_type": "기관명(참고·자동오류아님)",
+            "occurrences": {"중등특수교육과": len(dept_matches)},
+            "recommendation": (
+                f"공식 국/과명은 '{NEW_DEPT_NAME}'입니다. 발신 기관명 하단 부서 표기·담당부서란에 "
+                f"'학교교육국'이 누락되지 않았는지 확인이 필요합니다(자동 오류로 단정하지 않음)."
+            )
+        })
+
+    return issues
 
 
 # ==============================
@@ -197,6 +276,10 @@ def detect_spacing_variants(text: str, candidates: list[str], counts: Counter) -
 def analyze_naming(text: str, target_year: str) -> dict:
     all_issues = []
 
+    # ⓪ 기관명 개편(2026.7.1.) 구 명칭 잔존 탐지 (최우선)
+    org_rename_issues = detect_org_rename_issues(text)
+    all_issues.extend(org_rename_issues)
+
     # ① 연도 혼용 탐지 (가장 중요)
     year_issues = detect_year_mixing(text, target_year)
     all_issues.extend(year_issues)
@@ -224,7 +307,10 @@ def analyze_naming(text: str, target_year: str) -> dict:
             issue_type = "유사명혼용"
             recommendation = f"'{canonical}'과 유사한 명칭이 혼용됩니다. 공식 명칭을 확인하고 통일하세요."
 
-        # 이미 연도혼용으로 처리된 그룹과 중복 방지
+        # 이미 연도혼용 또는 기관명 개편(구명칭) 이슈로 처리된 항목과 중복·모순 방지
+        already_handled_names = {OLD_ORG_NAME, OLD_CENTER_NAME}
+        if canonical in already_handled_names or any(v in already_handled_names for v in variants):
+            continue
         if not any(canonical in str(yi.get('variants', '')) or canonical == yi.get('canonical', '') for yi in year_issues):
             all_issues.append({
                 "canonical": canonical,
