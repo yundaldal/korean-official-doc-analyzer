@@ -24,6 +24,7 @@ AI가 이 결과를 기반으로 사용자에게 해당 인물이 실제 기안�
     }
 """
 
+import argparse
 import sys
 import re
 import json
@@ -227,18 +228,30 @@ def _extract_context(line: str, start: int, end: int, padding: int = 20) -> str:
 # ==============================
 
 def main():
-    if len(sys.argv) < 2:
-        print('사용법: python3 extract_persons.py <텍스트 또는 파일경로>', file=sys.stderr)
+    if len(sys.argv) >= 2 and sys.argv[1].startswith('--'):
+        parser = argparse.ArgumentParser(description='공문서 내 인물명 추출')
+        parser.add_argument('--input-file', help='텍스트 파일 경로 (긴 문서는 반드시 이 옵션을 사용)')
+        parser.add_argument('--text', help='텍스트 직접 입력 (짧은 경우에만 사용)')
+        args = parser.parse_args()
+        if args.input_file:
+            with open(args.input_file, encoding='utf-8') as f:
+                text = f.read()
+        elif args.text is not None:
+            text = args.text
+        else:
+            print('입력이 없습니다: --input-file 또는 --text 중 하나를 지정하세요.', file=sys.stderr)
+            sys.exit(1)
+    elif len(sys.argv) < 2:
+        print('사용법: python3 extract_persons.py --input-file <파일경로>', file=sys.stderr)
         sys.exit(1)
-
-    arg = sys.argv[1]
-
-    # 파일인지 텍스트 직접 입력인지 판별
-    try:
-        with open(arg, encoding='utf-8') as f:
-            text = f.read()
-    except (FileNotFoundError, OSError):
-        text = arg
+    else:
+        # 구버전 하위 호환: 위치인자 1개 — 파일경로면 읽고, 아니면 텍스트 자체로 간주
+        arg = sys.argv[1]
+        try:
+            with open(arg, encoding='utf-8') as f:
+                text = f.read()
+        except (FileNotFoundError, OSError):
+            text = arg
 
     persons = extract_persons(text)
 

@@ -2,12 +2,16 @@
 """
 두 문서(과거 vs 현재) 비교 스크립트 — 미변경 항목 탐지
 
-사용법:
+사용법 (v2 — 파일 경로 방식 우선, 긴 문서에서 쉘 인자 길이 문제 방지):
     python3 compare_docs.py \
-        --old-text "<과거_문서_텍스트>" \
-        --new-text "<현재_문서_텍스트>" \
+        --old-file "<과거_문서_텍스트_파일_경로>" \
+        --new-file "<현재_문서_텍스트_파일_경로>" \
         --source-year 2025 \
         --target-year 2026
+
+    (--old-text/--new-text로 직접 텍스트를 넘기는 것도 가능하지만 긴 문서에는 쓰지 말 것 —
+     v1에는 이 옵션이 강제라서, 파일 경로 문자열을 그대로 텍스트인 척 비교해버리는
+     조용한 실패가 있었다. 항상 --old-file/--new-file을 우선 사용한다.)
 
 출력(JSON):
     {
@@ -16,6 +20,11 @@
         "newly_added":         [{"line": "...", "reason": "..."}],   # ✅ 새로 추가된 항목
         "summary": {"critical": N, "review": N, "added": N}
     }
+
+알려진 한계(다음 단계 개선 예정, 이번 업데이트에는 미포함):
+    - 현재는 줄 단위 exact-line 비교만 수행한다. SequenceMatcher를 import는 하지만
+      실제 유사도 비교(fuzzy matching)에는 아직 쓰지 않는다. 그 결과 한 글자만 바뀐
+      동일 항목도 "완전히 새 항목"으로 분류될 수 있다 — 결과를 볼 때 이 점을 감안할 것.
 """
 
 import sys
@@ -177,15 +186,33 @@ def compare_documents(old_text: str, new_text: str,
 # ==============================
 def main():
     parser = argparse.ArgumentParser(description='두 문서 비교 — 미변경 항목 탐지')
-    parser.add_argument('--old-text', required=True, help='과거 문서 텍스트')
-    parser.add_argument('--new-text', required=True, help='현재 문서 텍스트')
+    parser.add_argument('--old-file', help='과거 문서 텍스트 파일 경로 (긴 문서는 반드시 이 옵션 사용)')
+    parser.add_argument('--new-file', help='현재 문서 텍스트 파일 경로 (긴 문서는 반드시 이 옵션 사용)')
+    parser.add_argument('--old-text', help='과거 문서 텍스트 직접 입력 (짧은 경우에만)')
+    parser.add_argument('--new-text', help='현재 문서 텍스트 직접 입력 (짧은 경우에만)')
     parser.add_argument('--source-year', required=True, help='원본 연도 (예: 2025)')
     parser.add_argument('--target-year', required=True, help='목표 연도 (예: 2026)')
     args = parser.parse_args()
 
+    if args.old_file:
+        with open(args.old_file, encoding='utf-8') as f:
+            old_text = f.read()
+    elif args.old_text is not None:
+        old_text = args.old_text
+    else:
+        parser.error('--old-file 또는 --old-text 중 하나를 지정하세요.')
+
+    if args.new_file:
+        with open(args.new_file, encoding='utf-8') as f:
+            new_text = f.read()
+    elif args.new_text is not None:
+        new_text = args.new_text
+    else:
+        parser.error('--new-file 또는 --new-text 중 하나를 지정하세요.')
+
     result = compare_documents(
-        old_text=args.old_text,
-        new_text=args.new_text,
+        old_text=old_text,
+        new_text=new_text,
         source_year=args.source_year,
         target_year=args.target_year
     )

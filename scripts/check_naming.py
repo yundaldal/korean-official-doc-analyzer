@@ -4,108 +4,44 @@
 
 같은 행사·프로그램·기관을 지칭하는 명칭이 문서 안에서 혼용되고 있는지 탐지한다.
 
-사용법:
-    python3 check_naming.py "<추출된_텍스트>" <target_year>
+사용법 (v2 — --input-file 우선 사용, 구버전 위치인자도 하위 호환):
+    python3 check_naming.py --input-file "<텍스트_파일_경로>" --current-year <target_year>
+    python3 check_naming.py "<텍스트>" <target_year>            # 구버전 방식(짧은 텍스트만)
+
+주의: v1은 파일 경로를 넘겨도 "경로 문자열 자체"를 텍스트로 분석해버리는 조용한 실패가
+있었다(P0-5). --input-file을 쓰면 반드시 해당 경로의 파일 내용을 읽어 분석한다.
 
 출력(JSON):
     {
         "groups": [
             {
-                "canonical": "가장 많이 등장한 명칭 (추정 공식명)",
+                "canonical": "가장 많이 등장한 명칭 (주의: 확정된 공식명이 아니라 최빈값 추정치일 뿐이다.
+                              오타가 여러 번 반복된 문서에서는 오타가 canonical로 잡힐 수 있으므로,
+                              문서 제목·최초 정의·공식 출처로 확정되지 않았다면 사용자에게
+                              '어느 쪽이 공식명인지' 반드시 확인받을 것 — 이 스크립트 자체가
+                              확정해주지는 않는다)",
                 "variants": ["다른 표기 A", "다른 표기 B"],
-                "issue_type": "연도혼용|축약혼용|띄어쓰기|기관명",
+                "issue_type": "연도혼용|축약혼용|유사명혼용|띄어쓰기",
                 "occurrences": {"명칭A": 5, "명칭B": 2},
                 "recommendation": "통일 권장 명칭 및 이유"
             }
         ],
         "total_issues": N
     }
+
+알려진 한계(다음 단계 개선 예정, 이번 업데이트에는 미포함):
+    - issue_type에 기관명 전용 태그가 아직 없어 기관명 혼용도 다른 유형과 섞여 분류될 수 있음
+    - 띄어쓰기 변형 탐지가 약해 일부 띄어쓰기 오류를 놓칠 수 있음
+    - 섹션(CURRENT/PAST) 맥락을 모르므로 과거/현재 행사명이 각각 정상 존재해도 '연도 혼용'으로
+      오탐할 수 있음 — 결과를 그대로 확정 짓지 말고 반드시 사람이 한 번 더 확인할 것
 """
 
+import argparse
 import sys
 import re
 import json
-import datetime
 from collections import Counter, defaultdict
 from difflib import SequenceMatcher
-
-
-# ==============================
-# 기관명 개편 검증 (2026.7.1. 시행)
-# ==============================
-# 광주광역시교육청 + 전라남도교육청 통합 → 전남광주통합특별시교육청 출범(2026.7.1.)
-# 스킬 실행 시점(datetime.date.today())이 시행일 이후인 경우에만 구 명칭을 오류로 판정한다.
-
-ORG_RENAME_EFFECTIVE_DATE = datetime.date(2026, 7, 1)
-
-# 신규 공식 명칭
-NEW_ORG_NAME = "전남광주통합특별시교육청"
-NEW_DEPT_NAME = "학교교육국 중등특수교육과"
-NEW_CENTER_NAME = "전남광주통합특별시교육청 광주특수교육지원센터"
-
-# 구 명칭 (2026.7.1. 이후로는 오류로 판정)
-OLD_ORG_NAME = "광주광역시교육청"
-OLD_CENTER_NAME = "광주광역시교육청 특수교육지원센터"
-
-
-def detect_org_rename_issues(text: str) -> list[dict]:
-    """2026.7.1. 조직 통합에 따른 구 기관명 잔존 여부를 탐지한다.
-
-    - 무조건 오류로 판정하는 대상은 '광주광역시교육청', '광주광역시교육청 특수교육지원센터' 두 가지뿐이다.
-    - 스킬 실행 시점이 시행일(2026.7.1.) 이전이면 검증하지 않는다.
-    - 국/과명('학교교육국 중등특수교육과')은 자동 오류 판정 대상이 아니며,
-      '학교교육국' 누락이 의심되는 경우에 한해 참고용 안내만 제공한다.
-    """
-    issues = []
-
-    if datetime.date.today() < ORG_RENAME_EFFECTIVE_DATE:
-        return issues
-
-    # ① 센터명 (더 구체적인 패턴을 먼저 검사하여 기관명 이슈와 중복 집계되지 않도록 함)
-    center_matches = re.findall(re.escape(OLD_CENTER_NAME), text)
-    if center_matches:
-        issues.append({
-            "canonical": NEW_CENTER_NAME,
-            "variants": [OLD_CENTER_NAME],
-            "issue_type": "기관명(조직개편·구명칭)",
-            "occurrences": {OLD_CENTER_NAME: len(center_matches)},
-            "recommendation": (
-                f"2026.7.1. 광주·전남 교육행정 통합에 따라 '{OLD_CENTER_NAME}'는 "
-                f"'{NEW_CENTER_NAME}'로 변경되었습니다. 반드시 수정하세요."
-            )
-        })
-
-    # ② 기관명 단독 (센터명 표기에 포함된 경우는 중복 집계 제외)
-    org_pattern = re.compile(re.escape(OLD_ORG_NAME) + r'(?!\s*특수교육지원센터)')
-    org_matches = org_pattern.findall(text)
-    if org_matches:
-        issues.append({
-            "canonical": NEW_ORG_NAME,
-            "variants": [OLD_ORG_NAME],
-            "issue_type": "기관명(조직개편·구명칭)",
-            "occurrences": {OLD_ORG_NAME: len(org_matches)},
-            "recommendation": (
-                f"2026.7.1. 광주·전남 교육행정 통합에 따라 '{OLD_ORG_NAME}'는 "
-                f"'{NEW_ORG_NAME}'로 변경되었습니다. 반드시 수정하세요."
-            )
-        })
-
-    # ③ 국/과명 참고용 확인 (자동 오류 판정 아님 — '학교교육국' 누락 의심 시에만 안내)
-    dept_pattern = re.compile(r'(?<!학교교육국\s)(?<!학교교육국)중등특수교육과')
-    dept_matches = dept_pattern.findall(text)
-    if dept_matches:
-        issues.append({
-            "canonical": NEW_DEPT_NAME,
-            "variants": ["중등특수교육과 (소속 국명 누락 의심)"],
-            "issue_type": "기관명(참고·자동오류아님)",
-            "occurrences": {"중등특수교육과": len(dept_matches)},
-            "recommendation": (
-                f"공식 국/과명은 '{NEW_DEPT_NAME}'입니다. 발신 기관명 하단 부서 표기·담당부서란에 "
-                f"'학교교육국'이 누락되지 않았는지 확인이 필요합니다(자동 오류로 단정하지 않음)."
-            )
-        })
-
-    return issues
 
 
 # ==============================
@@ -276,10 +212,6 @@ def detect_spacing_variants(text: str, candidates: list[str], counts: Counter) -
 def analyze_naming(text: str, target_year: str) -> dict:
     all_issues = []
 
-    # ⓪ 기관명 개편(2026.7.1.) 구 명칭 잔존 탐지 (최우선)
-    org_rename_issues = detect_org_rename_issues(text)
-    all_issues.extend(org_rename_issues)
-
     # ① 연도 혼용 탐지 (가장 중요)
     year_issues = detect_year_mixing(text, target_year)
     all_issues.extend(year_issues)
@@ -307,10 +239,7 @@ def analyze_naming(text: str, target_year: str) -> dict:
             issue_type = "유사명혼용"
             recommendation = f"'{canonical}'과 유사한 명칭이 혼용됩니다. 공식 명칭을 확인하고 통일하세요."
 
-        # 이미 연도혼용 또는 기관명 개편(구명칭) 이슈로 처리된 항목과 중복·모순 방지
-        already_handled_names = {OLD_ORG_NAME, OLD_CENTER_NAME}
-        if canonical in already_handled_names or any(v in already_handled_names for v in variants):
-            continue
+        # 이미 연도혼용으로 처리된 그룹과 중복 방지
         if not any(canonical in str(yi.get('variants', '')) or canonical == yi.get('canonical', '') for yi in year_issues):
             all_issues.append({
                 "canonical": canonical,
@@ -335,12 +264,26 @@ def analyze_naming(text: str, target_year: str) -> dict:
 # ==============================
 
 def main():
-    if len(sys.argv) < 3:
-        print("사용법: check_naming.py <텍스트> <target_year>", file=sys.stderr)
-        sys.exit(1)
+    # 구버전 하위 호환: check_naming.py <텍스트> <target_year>
+    if len(sys.argv) >= 3 and not sys.argv[1].startswith('--'):
+        text = sys.argv[1]
+        target_year = sys.argv[2]
+    else:
+        parser = argparse.ArgumentParser(description='문서 내 명칭 일관성 검증')
+        parser.add_argument('--input-file', help='텍스트 파일 경로 (긴 문서는 반드시 이 옵션을 사용)')
+        parser.add_argument('--text', help='텍스트 직접 입력 (짧은 경우에만 사용)')
+        parser.add_argument('--current-year', dest='target_year', required=True, help='기준연도')
+        args = parser.parse_args()
 
-    text = sys.argv[1]
-    target_year = sys.argv[2]
+        if args.input_file:
+            with open(args.input_file, encoding='utf-8') as f:
+                text = f.read()
+        elif args.text is not None:
+            text = args.text
+        else:
+            print('입력이 없습니다: --input-file 또는 --text 중 하나를 지정하세요.', file=sys.stderr)
+            sys.exit(1)
+        target_year = args.target_year
 
     result = analyze_naming(text, target_year)
     print(json.dumps(result, ensure_ascii=False, indent=2))
